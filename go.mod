@@ -9,6 +9,7 @@ require (
 	github.com/go-openapi/strfmt v0.20.1 // indirect
 	github.com/gosimple/slug v1.9.0
 	github.com/grafana-tools/sdk v0.0.0-20210714133701-11b1efc100c9
+	github.com/graymeta/stow v0.2.7
 	github.com/jedib0t/go-pretty v4.3.0+incompatible
 	github.com/mattn/go-colorable v0.1.8 // indirect
 	github.com/mattn/go-isatty v0.0.13 // indirect
