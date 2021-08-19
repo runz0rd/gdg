@@ -3,9 +3,6 @@ package api
 import (
 	"context"
 	"encoding/json"
-	"fmt"
-	"io/ioutil"
-	"os"
 	"strings"
 
 	"github.com/gosimple/slug"
@@ -49,11 +46,16 @@ func (s *DashNGoImpl) ImportDataSources(filter Filter) []string {
 			continue
 		}
 		dsPath := buildDataSourcePath(s.configRef, slug.Make(ds.Name))
-		if err = ioutil.WriteFile(dsPath, dsPacked, os.FileMode(int(0666))); err != nil {
+		if err = s.storage.WriteFile(dsPath, dsPacked); err != nil {
 			log.Errorf("%s for %s\n", err, meta.Slug)
 		} else {
 			dataFiles = append(dataFiles, dsPath)
 		}
+		//if err = ioutil.WriteFile(dsPath, dsPacked, os.FileMode(int(0666))); err != nil {
+		//	log.Errorf("%s for %s\n", err, meta.Slug)
+		//} else {
+		//	dataFiles = append(dataFiles, dsPath)
+		//}
 	}
 	return dataFiles
 }
@@ -77,24 +79,24 @@ func (s *DashNGoImpl) ExportDataSources(filter Filter) []string {
 	var exported []string = make([]string, 0)
 
 	ctx := context.Background()
-	filesInDir, err := ioutil.ReadDir(getResourcePath(s.configRef, "ds"))
+	filesInDir, err := s.storage.ReadDir(getResourcePath(s.configRef, "ds"))
 	datasources = s.ListDataSources(filter)
 
 	var rawDS []byte
 	if err != nil {
-		fmt.Fprint(os.Stderr, err)
+		log.Error(err)
 	}
 	for _, file := range filesInDir {
-		fileLocation := fmt.Sprintf("%s/%s", getResourcePath(s.configRef, "ds"), file.Name())
-		if strings.HasSuffix(file.Name(), ".json") {
-			if rawDS, err = ioutil.ReadFile(fileLocation); err != nil {
-				fmt.Fprint(os.Stderr, err)
+		fileLocation := file
+		if strings.HasSuffix(file, ".json") {
+			if rawDS, err = s.storage.ReadFile(fileLocation); err != nil {
+				log.Error(err)
 				continue
 			}
 			var newDS sdk.Datasource
 
 			if err = json.Unmarshal(rawDS, &newDS); err != nil {
-				fmt.Fprint(os.Stderr, err)
+				log.Error(err)
 				continue
 			}
 

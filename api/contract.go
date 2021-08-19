@@ -34,6 +34,7 @@ type DashNGoImpl struct {
 	grafanaConf *config.GrafanaConfig
 	configRef   *viper.Viper
 	debug       bool
+	storage 	Storage
 }
 
 func (s *DashNGoImpl) init() {
@@ -42,7 +43,7 @@ func (s *DashNGoImpl) init() {
 	s.client = s.Login()
 	s.adminClient = s.AdminLogin()
 	s.debug = config.Config().IsDebug()
-
+	s.storage = NewLocalStorageImpl(s.grafanaConf)
 }
 
 func NewApiService() ApiService {

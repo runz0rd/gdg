@@ -47,12 +47,12 @@ func init() {
 
 func initConfig() {
 	configProvider := config.Config().ViperConfig()
-	setupGrafanaClient()
 	log.Debug("Creating output locations")
 	dir := configProvider.GetString("env.output.datasources")
 	os.MkdirAll(dir, 0755)
 	dir = configProvider.GetString("env.output.dashboards")
 	os.MkdirAll(dir, 0755)
+	setupGrafanaClient()
 	//Output Renderer
 	tableObj = table.NewWriter()
 	tableObj.SetOutputMirror(os.Stdout)
