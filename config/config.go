@@ -1,6 +1,10 @@
 package config
 
 import (
+	"fmt"
+	"github.com/thoas/go-funk"
+	"io/ioutil"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -41,16 +45,74 @@ func Config() *ConfigStruct {
 	return configData
 }
 
-func InitConfig(override string) {
+//setMapValueEnvOverride recursively iterate over the keys and updates the map value accordingly
+func setMapValueEnvOverride(keys []string, mapValue map[string]interface{}, value interface{}) {
+	if len(keys) > 1 {
+		rawInnerObject, ok := mapValue[keys[0]]
+		if !ok {
+			log.Warn("No Inner map exists, cannot set Env Override")
+			return
+		}
+
+		innerMap, ok := rawInnerObject.(map[string]interface{})
+		if !ok {
+			log.Warn("cannot traverse full map path.  Unable to set ENV override. Returning ")
+			return
+		}
+		setMapValueEnvOverride(keys[1:], innerMap, value)
+	} else {
+		mapValue[keys[0]] = value
+	}
+
+}
+
+//applyEnvOverrides a bit of a hack to get around a viper limitation.
+// GetStringMap does not apply env overrides, so we have to traverse it again
+// and reset missing values
+func applyEnvOverrides(contexts map[string]interface{}, mapName string, config *viper.Viper) map[string]interface{} {
+	keys := config.AllKeys()
+	matchKey := fmt.Sprintf("contexts.%s", config.GetString("context_name"))
+	filteredKeys := funk.Filter(keys, func(s string) bool { return strings.Contains(s, matchKey) })
+	keys = filteredKeys.([]string)
+	for _, key := range keys {
+		value := config.Get(key)
+		newKey := strings.Replace(key, fmt.Sprintf("%s.", mapName), "", 1)
+		setMapValueEnvOverride(strings.Split(newKey, "."), contexts, value)
+	}
+
+	return contexts
+}
+
+func InitConfig(override, defaultConfig string) {
 	configData = &ConfigStruct{}
 	appName := "importer"
 	if override != "" {
 		appName = filepath.Base(override)
 		appName = strings.TrimSuffix(appName, filepath.Ext(appName))
 	}
+	var err error
 
-	configData.defaultConfig = readViperConfig(appName)
+	configData.defaultConfig, err = readViperConfig(appName)
+	if err != nil {
+		err = os.MkdirAll("conf", os.ModePerm)
+		if err != nil {
+			log.Fatal("unable to create configuration folder: 'conf'")
+		}
+		err = ioutil.WriteFile("conf/importer.yml", []byte(defaultConfig), 0644)
+		if err != nil {
+			log.Panic("Could not persist default config locally")
+		}
+		appName = "importer"
+
+		configData.defaultConfig, err = readViperConfig(appName)
+		if err != nil {
+			log.Panic(err)
+		}
+
+	}
 	contexts := configData.defaultConfig.GetStringMap("contexts")
+	contexts = applyEnvOverrides(contexts, "contexts", configData.defaultConfig)
+
 	contextMaps, err := yaml.Marshal(contexts)
 	if err != nil {
 		log.Fatal("Failed to decode context map, please check your configuration")
@@ -63,9 +125,11 @@ func InitConfig(override string) {
 }
 
 //readViperConfig utilizes the viper library to load the config from the selected paths
-func readViperConfig(appName string) *viper.Viper {
+func readViperConfig(appName string) (*viper.Viper, error) {
 	v := viper.New()
-	v.SetEnvPrefix(appName)
+	v.SetEnvPrefix("GDG")
+	replacer := strings.NewReplacer(".", "__")
+	v.SetEnvKeyReplacer(replacer)
 	v.SetConfigName(appName)
 	v.AddConfigPath(".")
 	v.AddConfigPath("../conf")
@@ -77,9 +141,6 @@ func readViperConfig(appName string) *viper.Viper {
 	v.SetDefault("loglevel", "debug")
 
 	err := v.ReadInConfig()
-	if err != nil {
-		panic(err)
-	}
 
-	return v
+	return v, err
 }

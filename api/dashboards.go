@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/netsage-project/gdg/apphelpers"
+	"github.com/esnet/gdg/apphelpers"
 
 	"github.com/tidwall/pretty"
 
@@ -44,19 +44,32 @@ func (s *DashNGoImpl) ListDashboards(filters Filter) []sdk.FoundBoard {
 		}
 	}
 	var boardsList []sdk.FoundBoard = make([]sdk.FoundBoard, 0)
-	boardLinks, err := s.client.Search(ctx, sdk.SearchType(sdk.SearchTypeDashboard))
-	if err != nil {
-		log.Fatal("Failed to retrieve dashboards", err)
+	var boardLinks []sdk.FoundBoard = make([]sdk.FoundBoard, 0)
+
+	var page uint = 1
+	var limit uint = 5000 // Upper bound of Grafana API call
+	for {
+		pageBoardLinks, err := s.client.Search(ctx, sdk.SearchType(sdk.SearchTypeDashboard), sdk.SearchLimit(limit), sdk.SearchPage(page))
+		if err != nil {
+			log.Fatal("Failed to retrieve dashboards", err)
+		}
+		boardLinks = append(boardLinks, pageBoardLinks...)
+		if len(pageBoardLinks) < int(limit) {
+			break
+		}
+		page += 1
 	}
+
 	//Fallback on defaults
 	if filters == nil {
 		filters = &DashboardFilter{}
 	}
 
 	folderFilters := filters.GetFolders()
-	var validFolder bool = false
-	var validUid bool = false
+	var validFolder bool
+	var validUid bool
 	for _, link := range boardLinks {
+		validFolder = false
 		if apphelpers.GetCtxDefaultGrafanaConfig().IgnoreFilters {
 			validFolder = true
 		} else if funk.ContainsString(folderFilters, link.FolderTitle) {
@@ -69,15 +82,7 @@ func (s *DashNGoImpl) ListDashboards(filters Filter) []sdk.FoundBoard {
 			continue
 		}
 		updateSlug(&link)
-		if filters.GetFilter("DashFilter") != "" {
-			if link.Slug == filters.GetFilter("DashFilter") {
-				validUid = true
-			} else {
-				validUid = false
-			}
-		} else {
-			validUid = true
-		}
+		validUid = filters.GetFilter("DashFilter") == "" || link.Slug == filters.GetFilter("DashFilter")
 		if link.FolderID == 0 {
 			link.FolderTitle = DefaultFolderName
 		}
@@ -85,9 +90,6 @@ func (s *DashNGoImpl) ListDashboards(filters Filter) []sdk.FoundBoard {
 		if validFolder && validUid {
 			boardsList = append(boardsList, link)
 		}
-
-		validFolder, validUid = false, false
-
 	}
 
 	return boardsList

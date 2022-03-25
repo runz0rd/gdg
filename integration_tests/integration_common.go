@@ -1,18 +1,19 @@
 package integration_tests
 
 import (
+	"github.com/sirupsen/logrus"
 	"os"
 	"strings"
 	"testing"
 
-	"github.com/netsage-project/gdg/api"
-	"github.com/netsage-project/gdg/config"
+	"github.com/esnet/gdg/api"
+	"github.com/esnet/gdg/config"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 )
 
 func initTest(t *testing.T) (api.ApiService, *viper.Viper) {
-	config.InitConfig("")
+	config.InitConfig("testing.yml", "'")
 	conf := config.Config().ViperConfig()
 	assert.NotNil(t, conf)
 	conf.Set("context_name", "testing")
@@ -23,7 +24,10 @@ func initTest(t *testing.T) (api.ApiService, *viper.Viper) {
 	client := api.NewApiService()
 	path, _ := os.Getwd()
 	if strings.Contains(path, "integration_tests") {
-		os.Chdir("..")
+		err := os.Chdir("..")
+		if err != nil {
+			logrus.Warning("unable to set directory to parent")
+		}
 	}
 	return client, conf
 }

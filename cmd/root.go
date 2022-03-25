@@ -2,24 +2,26 @@ package cmd
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
 
 	"github.com/jedib0t/go-pretty/table"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/netsage-project/gdg/api"
-	"github.com/netsage-project/gdg/config"
+	"github.com/esnet/gdg/api"
+	"github.com/esnet/gdg/config"
 	"github.com/spf13/cobra"
 )
 
 var (
-	tableObj table.Writer
-	client   api.ApiService
+	tableObj      table.Writer
+	client        api.ApiService
+	DefaultConfig string
 )
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
-	Use:   "generated code example",
+	Use:   "gdg Grafana Dash-N-Grab",
 	Short: "A brief description of your application",
 	Long: `A longer description that spans multiple lines and likely contains
 examples and usage of using your application. For example:
@@ -48,15 +50,23 @@ func init() {
 
 func initConfig() {
 	configOverride, _ := rootCmd.Flags().GetString("config")
-	config.InitConfig(configOverride)
+	if DefaultConfig == "" {
+		raw, err := ioutil.ReadFile("conf/importer-example.yml")
+		if err == nil {
+			DefaultConfig = string(raw)
+		} else {
+			DefaultConfig = ""
+		}
+	}
+	config.InitConfig(configOverride, DefaultConfig)
 
 	configProvider := config.Config().ViperConfig()
 	setupGrafanaClient()
 	log.Debug("Creating output locations")
 	dir := configProvider.GetString("env.output.datasources")
-	os.MkdirAll(dir, 0755)
+	api.CreateDestinationPath(dir)
 	dir = configProvider.GetString("env.output.dashboards")
-	os.MkdirAll(dir, 0755)
+	api.CreateDestinationPath(dir)
 	//Output Renderer
 	tableObj = table.NewWriter()
 	tableObj.SetOutputMirror(os.Stdout)

@@ -1,12 +1,17 @@
 package main
 
 import (
-	"github.com/netsage-project/gdg/cmd"
-	applogger "github.com/netsage-project/gdg/log"
+	_ "embed"
+
+	"github.com/esnet/gdg/cmd"
+	applogger "github.com/esnet/gdg/log"
 )
 
-func main() {
+//go:embed conf/importer-example.yml
+var defaultConfig string
 
+func main() {
+	cmd.DefaultConfig = defaultConfig
 	cmd.Execute()
 
 }

@@ -10,7 +10,7 @@ This project requires Go to be installed. On OS X with Homebrew you can just run
 
 
 
-make a copy of [conf/importer-example.yml](https://github.com/netsage-project/gdg/blob/master/conf/importer-example.yml) and name it `conf/importer.yml` You'll need GRAFANA ADMINISTRATIVE privileges to proceed.
+make a copy of [conf/importer-example.yml](https://github.com/esnet/gdg/blob/master/conf/importer-example.yml) and name it `conf/importer.yml` You'll need GRAFANA ADMINISTRATIVE privileges to proceed.
 
 
 ### Authentication
@@ -88,6 +88,24 @@ env.output defines where the files will be saved and imported from.
 
 `globals.debug` when set will print a more verbose output (Development In Progress)
 `globals.ignore_ssl_errors` when set will disregard any SSL errors and proceed as expected
+
+### Environment Overrides
+
+If you wish to override certain value via the environment, like credentials and such you can do so.  
+
+The pattern for GDG's is as follows:  "GDG_SECTION__SECTION__keyname"
+
+For example if I want to set the context name to a different value I can use:
+
+```sh
+GDG_CONTEXT_NAME="testing" gdg ctx show ## Which will override the value from the context file.
+GDG_CONTEXTS__TESTING__URL="www.google.com" Will override the URL with the one provided.
+ ```
+
+{{< tip "warning" >}}
+**NOTE:** Complex data type are not supported, so if the value is an array it can't be currently set.
+{{< /tip >}}
+
 
 
 ### Building/Running the app
