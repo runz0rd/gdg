@@ -6,7 +6,6 @@ import (
 	"os"
 
 	"github.com/jedib0t/go-pretty/table"
-	log "github.com/sirupsen/logrus"
 
 	"github.com/esnet/gdg/api"
 	"github.com/esnet/gdg/config"
@@ -60,13 +59,13 @@ func initConfig() {
 	}
 	config.InitConfig(configOverride, DefaultConfig)
 
-	configProvider := config.Config().ViperConfig()
+	// configProvider := config.Config().ViperConfig()
 	setupGrafanaClient()
-	log.Debug("Creating output locations")
-	dir := configProvider.GetString("env.output.datasources")
-	api.CreateDestinationPath(dir)
-	dir = configProvider.GetString("env.output.dashboards")
-	api.CreateDestinationPath(dir)
+	// log.Debug("Creating output locations")
+	// dir := configProvider.GetString("env.output.datasources")
+	// api.CreateDestinationPath(dir)
+	// dir = configProvider.GetString("env.output.dashboards")
+	// api.CreateDestinationPath(dir)
 	//Output Renderer
 	tableObj = table.NewWriter()
 	tableObj.SetOutputMirror(os.Stdout)
